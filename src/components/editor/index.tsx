@@ -1,6 +1,6 @@
-import { Graph } from '../../models/graph';
-import { Component } from 'preact';
-import * as style from './style.css';
+import { Graph } from "../../models/graph";
+import { h, Component } from "preact";
+import * as style from "./style.css";
 
 export interface EditorProps {
     graph: Graph;
@@ -9,8 +9,8 @@ export interface EditorProps {
 export class EditorComponent extends Component<EditorProps> {
     render(props: EditorProps) {
         return (
-            <pre class={ style.editor }>
-                { JSON.stringify(props.graph, undefined, 4) }
+            <pre class={style.editor}>
+                {JSON.stringify(props.graph, undefined, 4)}
             </pre>
         );
     }
