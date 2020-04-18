@@ -1,11 +1,14 @@
-import { h, Component, createRef } from "preact";
-import { Graph, Vertex, Point } from "../../models/graph";
-import * as style from "./style.css";
+import { h, Component, createRef, ComponentChild } from 'preact';
+import { Graph, Vertex, Point } from '../../models/graph';
+import * as style from './style.css';
+import { PopoverComponent } from '../popover';
+import { VertexSettingsComponent } from '../vertex-settings';
+import { curry } from 'ramda';
 
 export interface GraphProps {
     graph: Graph;
-    onAddVertex?: (v: Vertex) => void;
-    onMoveVertex?: (i: number, p: Point) => void;
+    onAddVertex: (v: Vertex) => void;
+    onChangeVertex: (i: number, v: Vertex) => void;
 }
 
 export interface Translate {
@@ -22,13 +25,30 @@ export interface GraphState {
     movedVertexIndex?: number;
     movedVertexStartPoint?: Point;
     movedVertexTranslate?: Translate;
+
+    menuedVertexIndex?: number;
 }
 
 export class GraphComponent extends Component<GraphProps, GraphState> {
     state: Readonly<GraphState> = { translate: { dx: 0, dy: 0 } };
     private ref = createRef();
+    private menuedVertex = createRef();
 
-    onDblClick(event: MouseEvent): void {
+    private get vertexMenu(): ComponentChild {
+        return (
+            <VertexSettingsComponent
+                vertex={
+                    this.props.graph.vertices[this.state.menuedVertexIndex!]
+                }
+                onChange={curry(this.props.onChangeVertex)(
+                    this.state.menuedVertexIndex!
+                )}
+                onClose={() => this.setState({ menuedVertexIndex: undefined })}
+            />
+        );
+    }
+
+    private createVertex(event: MouseEvent): void {
         if (this.props.onAddVertex) {
             const svg = this.ref.current as SVGElement;
             const rect = svg.getBoundingClientRect();
@@ -36,18 +56,23 @@ export class GraphComponent extends Component<GraphProps, GraphState> {
                 x: event.clientX - rect.x - this.state.translate.dx,
                 y: event.clientY - rect.y - this.state.translate.dy
             };
-            this.props.onAddVertex({ ...point });
+            this.props.onAddVertex({
+                ...point,
+                color: '#000000',
+                name: ''
+            });
         }
     }
 
-    onMouseDown(event: MouseEvent): void {
+    private onMouseDown(event: MouseEvent): void {
         this.setState({
             translateStartPoint: { x: event.clientX, y: event.clientY },
-            translateStartValue: this.state.translate
+            translateStartValue: this.state.translate,
+            menuedVertexIndex: undefined
         });
     }
 
-    onMouseMove(event: MouseEvent): void {
+    private onMouseMove(event: MouseEvent): void {
         if (this.state.translateStartPoint && this.state.translateStartValue) {
             this.setState({
                 translate: {
@@ -72,13 +97,14 @@ export class GraphComponent extends Component<GraphProps, GraphState> {
         }
     }
 
-    onMouseUp(): void {
+    private onMouseUp(): void {
         if (
             this.state.movedVertexIndex !== undefined &&
             this.state.movedVertexTranslate &&
-            this.props.onMoveVertex
+            this.props.onChangeVertex
         ) {
-            this.props.onMoveVertex(this.state.movedVertexIndex, {
+            this.props.onChangeVertex(this.state.movedVertexIndex, {
+                ...this.props.graph.vertices[this.state.movedVertexIndex],
                 x:
                     this.props.graph.vertices[this.state.movedVertexIndex].x +
                     this.state.movedVertexTranslate.dx,
@@ -97,7 +123,7 @@ export class GraphComponent extends Component<GraphProps, GraphState> {
         });
     }
 
-    onVertexMoveStart(i: number, event: MouseEvent): void {
+    private onVertexMoveStart(i: number, event: MouseEvent): void {
         event.stopPropagation();
         this.setState({
             movedVertexIndex: i,
@@ -106,39 +132,70 @@ export class GraphComponent extends Component<GraphProps, GraphState> {
         });
     }
 
+    private onRightClickOnVertex(i: number, event: MouseEvent): boolean {
+        event.stopPropagation();
+        event.preventDefault();
+        this.setState({
+            menuedVertexIndex: i
+        });
+        return false;
+    }
+
+    private vertexTranslate(i: number, v: Vertex): string {
+        let x = v.x;
+        let y = v.y;
+        if (this.state.movedVertexIndex === i) {
+            x += this.state.movedVertexTranslate!.dx;
+            y += this.state.movedVertexTranslate!.dy;
+        }
+        return `translate(${x}, ${y})`;
+    }
+
     render(props: GraphProps, state: Readonly<GraphState>) {
         const transform = `translate(${state.translate.dx} ${state.translate.dy})`;
         return (
-            <svg
-                ref={this.ref}
-                class={style.svg}
-                onDblClick={e => this.onDblClick(e)}
-                onMouseDown={e => this.onMouseDown(e)}
-                onMouseMove={e => this.onMouseMove(e)}
-                onMouseUp={() => this.onMouseUp()}
-            >
-                <g transform={transform}>
-                    {props.graph.vertices.map((v, i) => (
-                        <circle
-                            key={v}
-                            cx={
-                                v.x +
-                                (state.movedVertexIndex === i
-                                    ? state.movedVertexTranslate!.dx
-                                    : 0)
-                            }
-                            cy={
-                                v.y +
-                                (state.movedVertexIndex === i
-                                    ? state.movedVertexTranslate!.dy
-                                    : 0)
-                            }
-                            r="5"
-                            onMouseDown={e => this.onVertexMoveStart(i, e)}
-                        />
-                    ))}
-                </g>
-            </svg>
+            <div class={style.svg}>
+                <svg
+                    ref={this.ref}
+                    class={style.svg}
+                    tab-index="-1"
+                    onDblClick={e => this.createVertex(e)}
+                    onMouseDown={e => this.onMouseDown(e)}
+                    onMouseMove={e => this.onMouseMove(e)}
+                    onMouseUp={() => this.onMouseUp()}
+                >
+                    <g transform={transform}>
+                        {props.graph.vertices.map((v, i) => (
+                            <g key={v} transform={this.vertexTranslate(i, v)}>
+                                <circle
+                                    ref={
+                                        i === state.menuedVertexIndex
+                                            ? this.menuedVertex
+                                            : undefined
+                                    }
+                                    r="5"
+                                    fill={v.color}
+                                    onMouseDown={e =>
+                                        this.onVertexMoveStart(i, e)
+                                    }
+                                    onContextMenu={e =>
+                                        this.onRightClickOnVertex(i, e)
+                                    }
+                                />
+                                <text x="5" y="15">
+                                    {v.name}
+                                </text>
+                            </g>
+                        ))}
+                    </g>
+                </svg>
+                {state.menuedVertexIndex !== undefined && this.menuedVertex ? (
+                    <PopoverComponent
+                        target={this.menuedVertex}
+                        content={this.vertexMenu}
+                    ></PopoverComponent>
+                ) : null}
+            </div>
         );
     }
 }

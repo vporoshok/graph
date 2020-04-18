@@ -3,34 +3,35 @@ module.exports = {
         browser: true
     },
     extends: [
-        "plugin:react/recommended",
-        "plugin:@typescript-eslint/recommended",
-        "prettier/@typescript-eslint",
-        "plugin:prettier/recommended"
+        'plugin:react/recommended',
+        'plugin:@typescript-eslint/recommended',
+        'prettier/@typescript-eslint',
+        'plugin:prettier/recommended'
     ],
-    parser: "@typescript-eslint/parser",
+    parser: '@typescript-eslint/parser',
     parserOptions: {
         ecmaFeatures: {
             jsx: true
         },
         ecmaVersion:  2018,
-        sourceType: "module",
+        sourceType: 'module',
     },
     rules: {
-        "react/no-unknown-property": ["error", { ignore: ["class"] }],
+        'react/no-unknown-property': ['error', { ignore: ['class'] }],
+        'react/prop-types': ['off'],
     },
     settings: {
         react: {
-            pragma: "h",
-            version: "detect"
+            pragma: 'h',
+            version: 'detect'
         },
     },
     overrides: [
         {
-            files: ["*.js"],
+            files: ['*.js'],
             rules: {
-                "@typescript-eslint/explicit-function-return-type": "off",
+                '@typescript-eslint/explicit-function-return-type': 'off',
             }
         }
-    ]
+    ],
 };
