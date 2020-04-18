@@ -30,5 +30,8 @@ export default {
             "src",
             "index"
         );
+        if (env.production) {
+            config.output.publicPath = '/graph/';
+        }
     }
 };
