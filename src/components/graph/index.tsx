@@ -154,7 +154,7 @@ export class GraphComponent extends Component<GraphProps, GraphState> {
     render(props: GraphProps, state: Readonly<GraphState>) {
         const transform = `translate(${state.translate.dx} ${state.translate.dy})`;
         return (
-            <div class={style.svg}>
+            <div class={style.container}>
                 <svg
                     ref={this.ref}
                     class={style.svg}
