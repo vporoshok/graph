@@ -1,6 +1,6 @@
 import { h, Component, ComponentChild } from 'preact';
 import { GraphComponent } from './graph/graph';
-import { Graph, Vertex, Edge, Change, ChangeKind } from '../models/graph';
+import { Graph, Vertex, Edge, Change } from '../models/graph';
 import * as style from './style.css';
 import { DeepReadonly } from '../models/readonly';
 
