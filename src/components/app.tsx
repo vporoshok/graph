@@ -1,6 +1,6 @@
 import { h, Component, ComponentChild } from 'preact';
 import { GraphComponent } from './graph/graph';
-import { Graph, Vertex, Edge } from '../models/graph';
+import { Graph, Vertex, Edge, Change, ChangeKind } from '../models/graph';
 import * as style from './style.css';
 import { DeepReadonly } from '../models/readonly';
 
@@ -29,11 +29,8 @@ export class AppComponent extends Component<{}, AppState> {
         edges: this.graph.E
     };
 
-    constructor() {
-        super();
-    }
-
-    UNSAFE_componentWillMount(): void {
+    // eslint-disable-next-line react/no-deprecated
+    componentWillMount(): void {
         window.graph = this.graph;
         const raw = localStorage.getItem('graph');
         if (raw !== null) {
@@ -66,7 +63,7 @@ export class AppComponent extends Component<{}, AppState> {
         );
     }
 
-    private updateState(): void {
+    private updateState(_event: Change): void {
         this.setState(
             {
                 vertices: this.graph.V,
