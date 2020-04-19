@@ -1,9 +1,8 @@
 import { h, Component, ComponentChild } from 'preact';
-import { GraphComponent } from './graph';
-import { Graph, Vertex } from '../models/graph';
+import { GraphComponent } from './graph/graph';
+import { Graph, Vertex, Edge } from '../models/graph';
 import * as style from './style.css';
-import { EditorComponent } from './editor';
-import { evolve, append, update } from 'ramda';
+import { DeepReadonly } from '../models/readonly';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 if ((module as any).hot) {
@@ -11,69 +10,73 @@ if ((module as any).hot) {
     require('preact/debug');
 }
 
-export interface AppState {
+declare const window: {
     graph: Graph;
+};
+
+export interface AppState {
+    vertices: DeepReadonly<Vertex[]>;
+    edges: DeepReadonly<Edge[]>;
 }
 
 export class AppComponent extends Component<{}, AppState> {
-    state: Readonly<AppState>;
+    private graph = new Graph();
+    private changeSub = this.graph.change$.subscribe(
+        this.updateState.bind(this)
+    );
+    state = {
+        vertices: this.graph.V,
+        edges: this.graph.E
+    };
 
     constructor() {
         super();
-        const state = localStorage.getItem('graph');
-        if (state) {
-            this.state = JSON.parse(state);
-        } else {
-            this.state = { graph: { vertices: [] } };
+    }
+
+    UNSAFE_componentWillMount(): void {
+        window.graph = this.graph;
+        const raw = localStorage.getItem('graph');
+        if (raw !== null) {
+            this.graph.deserialize(JSON.parse(raw));
         }
     }
 
-    setState(state: Partial<AppState>): void {
-        super.setState(state, () =>
-            localStorage.setItem('graph', JSON.stringify(this.state))
-        );
+    componentWillUnmount(): void {
+        if (this.changeSub) {
+            this.changeSub.unsubscribe();
+        }
     }
 
-    private onAddVertex(v: Vertex): void {
-        this.setState(
-            evolve(
-                {
-                    graph: {
-                        vertices: append(v) as (_: Vertex[]) => Vertex[]
-                    }
-                },
-                this.state
-            )
-        );
-    }
-
-    private onChangeVertex(i: number, v: Vertex): void {
-        this.setState(
-            evolve(
-                {
-                    graph: {
-                        vertices: update(i, v)
-                    }
-                },
-                this.state
-            )
-        );
-    }
-
-    render(_props: {}, state: Readonly<AppState>): ComponentChild {
+    render(): ComponentChild {
         return (
             <div id="app" class={style.container}>
                 <div class={style.graph}>
                     <GraphComponent
-                        graph={state.graph}
-                        onAddVertex={this.onAddVertex.bind(this)}
-                        onChangeVertex={this.onChangeVertex.bind(this)}
+                        vertices={this.state.vertices}
+                        edges={this.state.edges}
+                        addVertex={this.graph.addVertex.bind(this.graph)}
+                        moveVertex={this.graph.moveVertex.bind(this.graph)}
+                        updateVertex={this.graph.updateVertex.bind(this.graph)}
                     />
                 </div>
                 <div class={style.editor}>
-                    <EditorComponent graph={state.graph} />
+                    {/* <EditorComponent graph={this.gra} /> */}
                 </div>
             </div>
+        );
+    }
+
+    private updateState(): void {
+        this.setState(
+            {
+                vertices: this.graph.V,
+                edges: this.graph.E
+            },
+            () =>
+                localStorage.setItem(
+                    'graph',
+                    JSON.stringify(this.graph.serialize())
+                )
         );
     }
 }

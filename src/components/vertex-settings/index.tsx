@@ -28,7 +28,7 @@ export const VertexSettingsComponent: FunctionalComponent<VertexSettingsProps> =
             />
             <input
                 type="text"
-                autoFocus
+                ref={dom => dom?.select()}
                 value={name}
                 onChange={e => (name = e.currentTarget.value)}
             />
